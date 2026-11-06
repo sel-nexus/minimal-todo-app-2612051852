@@ -40,6 +40,48 @@ describe('Todo App task lifecycle', () => {
     ]);
   });
 
+  it('renders HTML-like task input as literal text without creating markup', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const input = screen.getByRole('textbox', { name: 'Add a task' });
+    const taskText = '<script>alert("xss")</script>';
+
+    await user.clear(input);
+    await user.type(input, taskText, { skipClick: true, skipAutoClose: true, delay: 0 });
+    await user.keyboard('{Enter}');
+
+    expect(screen.getByTestId('todo-title-1')).toHaveTextContent(taskText);
+    expect(screen.getByTestId('todo-title-1').querySelector('script')).toBeNull();
+    expect(document.querySelector('script')).toBeNull();
+  });
+
+  it('accepts and renders a task containing several thousand characters intact', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const input = screen.getByRole('textbox', { name: 'Add a task' });
+    const taskText = `start-${'a'.repeat(5000)}-end`;
+
+    await user.clear(input);
+    input.setRangeText(taskText);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await user.keyboard('{Enter}');
+
+    expect(screen.getByTestId('todo-title-1')).toHaveTextContent(taskText);
+    expect(screen.getByTestId('todo-title-1').textContent).toBe(taskText);
+  });
+
+  it('accepts task text through the native textbox as a string value', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const input = screen.getByRole('textbox', { name: 'Add a task' });
+
+    await user.type(input, 'Plain text input value');
+
+    expect(input).toHaveValue('Plain text input value');
+    expect(typeof input.value).toBe('string');
+  });
+
   it('adds a task with Enter and ignores blank or whitespace-only submissions', async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -47,6 +89,14 @@ describe('Todo App task lifecycle', () => {
     const addButton = screen.getByRole('button', { name: 'Add' });
 
     await user.click(addButton);
+    await user.clear(input);
+    await user.type(input, '   ');
+    await user.click(addButton);
+
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    expect(screen.getByTestId('empty-state')).toHaveTextContent('No tasks yet.');
+
+    await user.clear(input);
     await user.type(input, '   ');
     await user.keyboard('{Enter}');
 

@@ -32,6 +32,7 @@ test('completes the task lifecycle with deterministic selectors and no browser e
   await expect(input).toHaveValue('');
   await expect(page.getByTestId('todo-item-2')).toBeVisible();
   await expect(page.getByTestId('todo-list').getByRole('listitem')).toHaveCount(2);
+  await expect(page.getByTestId('todo-list').locator('li')).toHaveAttribute('data-testid', ['todo-item-1', 'todo-item-2']);
 
   await page.getByTestId('todo-checkbox-1').check();
   await expect(page.getByTestId('todo-title-1')).toHaveCSS('text-decoration-line', 'line-through');
@@ -45,6 +46,11 @@ test('completes the task lifecycle with deterministic selectors and no browser e
   await page.getByTestId('todo-delete-1').click();
   await expect(page.getByTestId('empty-state')).toHaveText('No tasks yet.');
   await expect(page.getByTestId('todo-list')).toBeVisible();
+
+  await input.fill('Third task');
+  await page.getByTestId('add-button').click();
+  await expect(page.getByTestId('todo-item-3')).toBeVisible();
+  await expect(page.getByTestId('todo-title-3')).toHaveText('Third task');
 
   await page.screenshot({ path: 'test-results/todo-empty-state.png', fullPage: true });
   expect(browserErrors).toEqual([]);
